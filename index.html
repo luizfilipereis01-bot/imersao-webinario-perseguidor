@@ -236,7 +236,7 @@ footer{position:relative;z-index:2;text-align:center;font-size:11px;color:#3d3e4
 
 /* ================= CONFIG ================= */
 // Cole aqui a URL do seu webhook (Make/Zapier/n8n/CRM). Vazio = só salva local.
-var WEBHOOK_URL = '';
+var WEBHOOK_URL = 'https://projeto01-n8n.gmxuno.easypanel.host/webhook/3ccdc2c7-24e5-4943-a540-91a97977208c';
 
 var QUESTIONS = [
   { key:'perfil', eyebrow:'Perfil', title:'Você é?',
@@ -390,11 +390,34 @@ function send(){
   try{ if(window.fbq) fbq('track','Lead'); }catch(e){}
   try{ if(window.gtag) gtag('event','generate_lead'); }catch(e){}
   if(!WEBHOOK_URL) { console.info('[Lead capturado]', lead); return; }
+
+  var payload = JSON.stringify(lead);
+
+  // 1) Tenta POST application/json (funciona se o n8n devolver CORS).
+  //    keepalive garante o envio mesmo se a página for fechada logo depois.
+  try{
+    fetch(WEBHOOK_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: payload,
+      keepalive: true
+    }).catch(function(){ beacon(payload); });
+  }catch(e){ beacon(payload); }
+}
+// Fallback à prova de CORS: content-type "simples" (text/plain) não dispara
+// preflight, então a requisição sempre chega ao n8n com o JSON no corpo.
+function beacon(payload){
+  try{
+    if(navigator.sendBeacon){
+      navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], {type:'text/plain;charset=UTF-8'}));
+      return;
+    }
+  }catch(e){}
   try{
     fetch(WEBHOOK_URL, {
       method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(lead)
+      headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      body: payload, keepalive: true
     });
   }catch(e){ console.warn('Falha ao enviar lead', e); }
 }

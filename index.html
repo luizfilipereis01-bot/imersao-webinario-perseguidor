@@ -1,0 +1,451 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Webinário Perseguidor — Aplicação</title>
+<meta name="description" content="Preencha a aplicação e receba o contato do nosso time." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000000;
+  --panel:rgba(255,255,255,.028);
+  --stroke:rgba(255,255,255,.09);
+  --stroke-2:rgba(255,255,255,.16);
+  --txt:#EDEDED;
+  --silver:#D7D7D7;
+  --muted:#7B7C85;
+  --gold:#C9A24B;
+  --gold-2:#E4C574;
+  --err:#E5484D;
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  min-height:100dvh;display:flex;flex-direction:column;
+  overflow-x:hidden;position:relative;
+}
+h1,h2,h3,.font-d{font-family:'Sora',sans-serif;letter-spacing:-.02em}
+
+/* subtle single glow — minimalista */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(70% 55% at 50% -8%,rgba(201,162,75,.10),transparent 60%);}
+canvas#fx{position:fixed;inset:0;z-index:60;pointer-events:none}
+
+.wrap{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:clamp(24px,5vw,44px) 20px 40px;width:100%}
+
+/* ---------- LOGO ---------- */
+.logo{display:flex;align-items:center;gap:15px;margin-bottom:clamp(22px,5vw,34px)}
+.logo svg.mark{width:clamp(52px,13vw,64px);height:auto;flex:none}
+.logo .wm{display:flex;flex-direction:column;line-height:.92}
+.logo .wm b{font-family:'Sora';font-weight:800;color:var(--silver);
+  font-size:clamp(20px,5.2vw,27px);letter-spacing:.01em}
+.logo .wm b.sub{font-weight:700;color:#B9B9B9;font-size:clamp(17px,4.4vw,23px);letter-spacing:.005em}
+
+/* progress */
+.prog{width:100%;max-width:600px;display:flex;align-items:center;gap:13px;margin-bottom:24px}
+.prog .bar{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.prog .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--gold-2));
+  transition:width .55s cubic-bezier(.22,1,.36,1)}
+.prog .lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.14em;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ---------- CARD ---------- */
+.card{position:relative;width:100%;max-width:600px;border-radius:var(--r);
+  border:1px solid var(--stroke);background:var(--panel);
+  padding:clamp(24px,5.5vw,40px);overflow:hidden}
+
+.step{display:none;animation:in .45s cubic-bezier(.22,1,.36,1) both}
+.step.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+.eyebrow::before{content:'';width:20px;height:1px;background:var(--gold)}
+h1.q{font-size:clamp(21px,5vw,29px);font-weight:800;line-height:1.2;margin-bottom:9px;text-wrap:balance}
+h1.q em{font-style:normal;color:var(--gold-2)}
+p.sub{color:var(--muted);font-size:14.5px;line-height:1.55;margin-bottom:26px;max-width:44ch}
+
+/* fields */
+.field{margin-bottom:15px;position:relative}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.02em}
+.field input{width:100%;padding:15px 16px;border-radius:12px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.02);color:var(--txt);font-size:15.5px;font-family:inherit;outline:none;
+  transition:border-color .22s,box-shadow .22s,background .22s}
+.field input::placeholder{color:#4c4d57}
+.field input:focus{border-color:var(--gold);background:rgba(255,255,255,.035);
+  box-shadow:0 0 0 3px rgba(201,162,75,.15)}
+.field.err input{border-color:var(--err);box-shadow:0 0 0 3px rgba(229,72,77,.14)}
+.field .msg{display:none;font-size:12px;color:var(--err);margin-top:6px;font-weight:500}
+.field.err .msg{display:block;animation:shake .32s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* options */
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;
+  padding:15px 17px;border-radius:12px;border:1px solid var(--stroke);background:rgba(255,255,255,.018);
+  color:var(--txt);font-family:inherit;font-size:15px;font-weight:500;line-height:1.4;
+  transition:border-color .2s,background .2s,transform .18s cubic-bezier(.22,1,.36,1)}
+.opt .k{flex:none;width:27px;height:27px;border-radius:8px;display:grid;place-items:center;
+  border:1px solid var(--stroke-2);background:rgba(255,255,255,.03);font-size:11.5px;font-weight:700;
+  color:var(--muted);font-family:'Sora';transition:.2s}
+.opt .arrow{margin-left:auto;opacity:0;transform:translateX(-6px);transition:.2s;color:var(--gold)}
+.opt:hover{border-color:rgba(201,162,75,.55);background:rgba(201,162,75,.05);transform:translateX(4px)}
+.opt:hover .k{border-color:var(--gold);color:var(--gold)}
+.opt:hover .arrow{opacity:1;transform:none}
+.opt.sel{border-color:var(--gold);background:rgba(201,162,75,.1)}
+.opt.sel .k{background:var(--gold);color:#141007;border-color:var(--gold)}
+
+/* button */
+.btn{width:100%;margin-top:22px;padding:16px 22px;border:none;border-radius:12px;cursor:pointer;
+  font-family:'Sora';font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#141007;
+  background:linear-gradient(100deg,var(--gold),var(--gold-2));
+  transition:transform .18s,box-shadow .25s,filter .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 10px 30px -12px rgba(201,162,75,.55)}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.06);box-shadow:0 16px 40px -14px rgba(201,162,75,.7)}
+.btn:active{transform:translateY(0) scale(.99)}
+.btn[disabled]{opacity:.6;cursor:not-allowed;transform:none}
+.back{margin-top:14px;background:none;border:none;color:var(--muted);font-family:inherit;font-size:13px;
+  cursor:pointer;display:flex;align-items:center;gap:7px;padding:6px;transition:color .2s}
+.back:hover{color:var(--silver)}
+.legal{margin-top:16px;font-size:11.5px;color:#54555f;text-align:center;line-height:1.5}
+
+/* ---------- SUCCESS ---------- */
+.done{text-align:center;padding:6px 0}
+.check{width:82px;height:82px;margin:0 auto 22px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(201,162,75,.08);border:1px solid rgba(201,162,75,.45);
+  box-shadow:0 0 0 10px rgba(201,162,75,.04);
+  animation:pop .55s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:none;opacity:1}}
+.check svg{width:38px;height:38px}
+.check svg path{stroke-dasharray:60;stroke-dashoffset:60;animation:draw .55s .28s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.summary{margin-top:24px;border-top:1px solid var(--stroke);padding-top:18px;text-align:left;display:grid;gap:9px}
+.summary .row{display:flex;justify-content:space-between;gap:14px;font-size:13px}
+.summary .row span:first-child{color:var(--muted)}
+.summary .row span:last-child{font-weight:600;text-align:right;color:var(--silver)}
+footer{position:relative;z-index:2;text-align:center;font-size:11px;color:#3d3e47;padding:0 18px 26px;letter-spacing:.03em}
+
+@media(max-width:520px){.opt{padding:14px 15px;font-size:14.5px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<canvas id="fx"></canvas>
+
+<div class="wrap">
+
+  <!-- LOGO -->
+  <div class="logo">
+    <svg class="mark" viewBox="0 0 200 200" role="img" aria-label="Webinário Perseguidor">
+      <g fill="none" stroke-linecap="round">
+        <!-- outer broken ring -->
+        <circle cx="100" cy="100" r="86" stroke="#D0D0D0" stroke-width="9"
+          stroke-dasharray="107 28" stroke-dashoffset="27" transform="rotate(-8 100 100)"/>
+        <!-- inner broken ring -->
+        <circle cx="100" cy="100" r="58" stroke="#D0D0D0" stroke-width="9"
+          stroke-dasharray="72 19" stroke-dashoffset="18" transform="rotate(-8 100 100)"/>
+        <!-- cardinal ticks (gold) -->
+        <g stroke="#C9A24B" stroke-width="9">
+          <line x1="100" y1="4"  x2="100" y2="26"/>
+          <line x1="100" y1="174" x2="100" y2="196"/>
+          <line x1="4"  y1="100" x2="26" y2="100"/>
+          <line x1="174" y1="100" x2="196" y2="100"/>
+        </g>
+      </g>
+      <!-- play triangle -->
+      <path d="M84 74 L134 100 L84 126 Z" fill="#111214" stroke="#C9A24B" stroke-width="8" stroke-linejoin="round"/>
+    </svg>
+    <div class="wm">
+      <b>Webinário</b>
+      <b class="sub">Perseguidor</b>
+    </div>
+  </div>
+
+  <!-- progress -->
+  <div class="prog">
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="lbl" id="plbl">01 / 06</div>
+  </div>
+
+  <main class="card" id="card">
+
+    <!-- 0 — DADOS -->
+    <section class="step on" data-step="0">
+      <div class="eyebrow">Aplicação · Vagas limitadas</div>
+      <h1 class="q">Preencha os campos abaixo para <em>receber contato</em> do nosso time</h1>
+      <p class="sub">Leva menos de 60 segundos. Suas respostas definem sua prioridade na fila de atendimento.</p>
+
+      <div class="field" id="f-nome">
+        <label for="nome">Qual seu nome?</label>
+        <input id="nome" type="text" autocomplete="name" placeholder="Seu nome completo" />
+        <div class="msg">Digite seu nome completo.</div>
+      </div>
+      <div class="field" id="f-email">
+        <label for="email">Qual seu email?</label>
+        <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="voce@email.com" />
+        <div class="msg">Digite um email válido.</div>
+      </div>
+      <div class="field" id="f-zap">
+        <label for="zap">Qual seu whatsapp?</label>
+        <input id="zap" type="tel" autocomplete="tel" inputmode="numeric" placeholder="(11) 99999-9999" maxlength="15" />
+        <div class="msg">Digite um WhatsApp válido com DDD.</div>
+      </div>
+
+      <button class="btn" id="go">Continuar <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <p class="legal">🔒 Seus dados estão seguros. Nada de spam — apenas o contato do nosso time.</p>
+    </section>
+
+    <section class="step" data-step="1"></section>
+    <section class="step" data-step="2"></section>
+    <section class="step" data-step="3"></section>
+    <section class="step" data-step="4"></section>
+    <section class="step" data-step="5"></section>
+
+    <!-- 6 — SUCESSO -->
+    <section class="step" data-step="6">
+      <div class="done">
+        <div class="check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#C9A24B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.2 5.2L20 7"/></svg>
+        </div>
+        <div class="eyebrow" style="justify-content:center">Aplicação recebida</div>
+        <h1 class="q">Prontinho, <em id="fname">tudo certo</em>!</h1>
+        <p class="sub" style="margin:0 auto">Sua aplicação para o <b style="color:var(--silver)">Webinário Perseguidor</b> foi registrada. Nosso time entra em contato pelo WhatsApp informado. Fique de olho — o retorno costuma acontecer em poucas horas.</p>
+        <div class="summary" id="summary"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>© Webinário Perseguidor — Todos os direitos reservados.</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= CONFIG ================= */
+// Cole aqui a URL do seu webhook (Make/Zapier/n8n/CRM). Vazio = só salva local.
+var WEBHOOK_URL = '';
+
+var QUESTIONS = [
+  { key:'perfil', eyebrow:'Perfil', title:'Você é?',
+    options:['Expert','Coprodutor','Estrategista','Copywriter','Gestor de Tráfego','Outro'] },
+  { key:'faturamento', eyebrow:'Faturamento', title:'Qual é o seu nível de faturamento <em>MENSAL</em> hoje?',
+    options:['Até R$30.000','De R$30.000 a R$50.000','De R$50.000 a R$100.000','Mais de R$100.000','Não faturo'] },
+  { key:'estrategia', eyebrow:'Estratégia', title:'Qual estratégia de vendas você utiliza hoje?',
+    options:['Low Ticket','VSL','Lançamento','Webinário','X1','Não faço nada'] },
+  { key:'dor', eyebrow:'Momento atual', title:'Qual frase mais te <em>define</em> hoje?',
+    options:['“Estou cansado da instabilidade do mercado digital”','“Nunca acertei nenhuma estratégia que realmente funcione”','“Já entrei em muitas mentorias e não tive resultado”','“Estou satisfeito com meus resultados e quero mais”','“Quero começar no digital com estratégia validada”'] }
+];
+
+var TOTAL = 6; // 0 dados + 4 perguntas + 1 @
+var lead = {};
+var current = 0;
+
+var $ = function(s,c){ return (c||document).querySelector(s); };
+var steps = document.querySelectorAll('.step');
+
+function buildSteps(){
+  QUESTIONS.forEach(function(q,i){
+    var el = steps[i+1];
+    var html = '<div class="eyebrow">'+q.eyebrow+'</div><h1 class="q">'+q.title+'</h1><div class="opts">';
+    q.options.forEach(function(opt,j){
+      html += '<button class="opt" type="button" data-val="'+opt.replace(/"/g,'&quot;')+'">'
+            + '<i class="k">'+(j+1)+'</i><span>'+opt+'</span>'
+            + '<svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>';
+    });
+    html += '</div><button class="back" type="button">'
+          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Voltar</button>';
+    el.innerHTML = html;
+
+    el.querySelectorAll('.opt').forEach(function(b){
+      b.addEventListener('click', function(){
+        el.querySelectorAll('.opt').forEach(function(x){ x.classList.remove('sel'); });
+        b.classList.add('sel');
+        lead[q.key] = b.getAttribute('data-val');
+        save();
+        setTimeout(function(){ goTo(i+2); }, 240);
+      });
+    });
+    el.querySelector('.back').addEventListener('click', function(){ goTo(i); });
+  });
+
+  // Passo final: @
+  var last = steps[5];
+  last.innerHTML =
+    '<div class="eyebrow">Última etapa</div>'
+  + '<h1 class="q">Qual o seu <em>@</em> (ou do seu expert)?</h1>'
+  + '<p class="sub">Usamos seu perfil para entender seu mercado antes do contato.</p>'
+  + '<div class="field" id="f-arroba"><label for="arroba">Seu @ no Instagram</label>'
+  + '<input id="arroba" type="text" placeholder="@seuperfil" autocapitalize="none" autocomplete="off" />'
+  + '<div class="msg">Informe seu @ para finalizar.</div></div>'
+  + '<button class="btn" id="finish">Finalizar aplicação '
+  + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>'
+  + '<button class="back" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Voltar</button>';
+
+  var arroba = $('#arroba', last);
+  arroba.addEventListener('input', function(){
+    var v = arroba.value.replace(/[^A-Za-z0-9._]/g,'');
+    arroba.value = v ? '@'+v : '';
+    $('#f-arroba').classList.remove('err');
+  });
+  arroba.addEventListener('keydown', function(e){ if(e.key === 'Enter') finish(); });
+  $('#finish', last).addEventListener('click', finish);
+  last.querySelector('.back').addEventListener('click', function(){ goTo(4); });
+}
+
+function goTo(n){
+  current = n;
+  steps.forEach(function(s,i){ s.classList.toggle('on', i === n); });
+  var pct = Math.min(100, (n / TOTAL) * 100);
+  $('#fill').style.width = (n === TOTAL ? 100 : Math.max(8, pct)) + '%';
+  $('#plbl').textContent = n >= TOTAL ? 'CONCLUÍDO' : ('0'+(n+1)) + ' / 0' + TOTAL;
+  window.scrollTo({top:0, behavior:'smooth'});
+  var first = steps[n].querySelector('input');
+  if(first && window.innerWidth > 720) setTimeout(function(){ first.focus(); }, 360);
+}
+
+/* ================= PASSO 0 ================= */
+var nome = $('#nome'), email = $('#email'), zap = $('#zap');
+
+zap.addEventListener('input', function(){
+  var v = zap.value.replace(/\D/g,'').slice(0,11);
+  if(v.length > 10)      v = v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+  else if(v.length > 6)  v = v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  else if(v.length > 2)  v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+  else if(v.length > 0)  v = v.replace(/(\d{0,2})/, '($1');
+  zap.value = v;
+  clearErr('f-zap');
+});
+[['nome','f-nome'],['email','f-email']].forEach(function(p){
+  document.getElementById(p[0]).addEventListener('input', function(){ clearErr(p[1]); });
+});
+[nome,email,zap].forEach(function(el){
+  el.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); submitLead(); } });
+});
+function clearErr(id){ document.getElementById(id).classList.remove('err'); }
+
+function submitLead(){
+  var ok = true;
+  if(nome.value.trim().length < 3 || nome.value.trim().indexOf(' ') === -1){ $('#f-nome').classList.add('err'); ok = false; }
+  if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email.value.trim())){ $('#f-email').classList.add('err'); ok = false; }
+  if(zap.value.replace(/\D/g,'').length < 10){ $('#f-zap').classList.add('err'); ok = false; }
+  if(!ok) return;
+
+  lead.nome = nome.value.trim();
+  lead.email = email.value.trim().toLowerCase();
+  lead.whatsapp = zap.value;
+  lead.iniciadoEm = new Date().toISOString();
+  Object.assign(lead, utms());
+  save();
+  goTo(1);
+}
+$('#go').addEventListener('click', submitLead);
+
+function finish(){
+  var a = $('#arroba');
+  if(!a.value.replace(/[@\s]/g,'')){ $('#f-arroba').classList.add('err'); a.focus(); return; }
+  lead.instagram = a.value;
+  lead.concluidoEm = new Date().toISOString();
+  save();
+  send();
+
+  $('#fname').textContent = lead.nome.split(' ')[0];
+  $('#summary').innerHTML = [
+    ['WhatsApp', lead.whatsapp],
+    ['Perfil', lead.perfil],
+    ['Faturamento', lead.faturamento],
+    ['Estratégia', lead.estrategia],
+    ['Instagram', lead.instagram]
+  ].map(function(r){
+    return '<div class="row"><span>'+r[0]+'</span><span>'+(r[1]||'—')+'</span></div>';
+  }).join('');
+
+  goTo(6);
+  confetti();
+}
+
+/* ================= PERSISTÊNCIA / ENVIO ================= */
+function utms(){
+  var p = new URLSearchParams(location.search), o = {};
+  ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){
+    if(p.get(k)) o[k] = p.get(k);
+  });
+  o.pagina = location.href;
+  return o;
+}
+function save(){ try{ localStorage.setItem('wp_lead', JSON.stringify(lead)); }catch(e){} }
+function send(){
+  try{ if(window.fbq) fbq('track','Lead'); }catch(e){}
+  try{ if(window.gtag) gtag('event','generate_lead'); }catch(e){}
+  if(!WEBHOOK_URL) { console.info('[Lead capturado]', lead); return; }
+  try{
+    fetch(WEBHOOK_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(lead)
+    });
+  }catch(e){ console.warn('Falha ao enviar lead', e); }
+}
+
+/* ================= CONFETTI (prata/dourado) ================= */
+function confetti(){
+  var cv = $('#fx'), ctx = cv.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; ctx.scale(dpr,dpr);
+  var cols = ['#C9A24B','#E4C574','#D7D7D7','#FFFFFF','#9C7A2E'];
+  var ps = [];
+  for(var i=0;i<120;i++){
+    ps.push({ x:innerWidth/2, y:innerHeight*0.32,
+      vx:(Math.random()-0.5)*13, vy:Math.random()*-13-3,
+      s:Math.random()*6+3, r:Math.random()*Math.PI, vr:(Math.random()-0.5)*0.3,
+      c:cols[Math.floor(Math.random()*cols.length)], a:1 });
+  }
+  var t0 = 0;
+  (function frame(){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    var alive = false;
+    ps.forEach(function(p){
+      p.vy += 0.32; p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.r += p.vr;
+      if(t0 > 70) p.a -= 0.016;
+      if(p.a > 0 && p.y < innerHeight + 40){
+        alive = true;
+        ctx.save(); ctx.globalAlpha = Math.max(0,p.a);
+        ctx.translate(p.x,p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);
+        ctx.restore();
+      }
+    });
+    t0++;
+    if(alive) requestAnimationFrame(frame);
+    else ctx.clearRect(0,0,innerWidth,innerHeight);
+  })();
+}
+
+/* ================= ATALHOS 1-9 ================= */
+document.addEventListener('keydown', function(e){
+  if(current < 1 || current > 4) return;
+  var i = parseInt(e.key,10);
+  if(!i) return;
+  var b = steps[current].querySelectorAll('.opt')[i-1];
+  if(b) b.click();
+});
+
+/* ================= INIT ================= */
+buildSteps();
+goTo(0);
+})();
+</script>
+</body>
+</html>

@@ -21,10 +21,13 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '4605443473021532');
+fbq('init', '2164901857787257');
 fbq('track', 'PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=4605443473021532&ev=PageView&noscript=1"
+/><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2164901857787257&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
 
@@ -416,7 +419,10 @@ function utms(){
 }
 function save(){ try{ localStorage.setItem('wp_lead', JSON.stringify(lead)); }catch(e){} }
 function send(){
-  try{ if(window.fbq) fbq('track','Lead'); }catch(e){}
+  // Mesmo event_id no Pixel e na API de Conversões = a Meta deduplica o Lead.
+  var eventId = 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+  try{ if(window.fbq) fbq('track','Lead',{},{eventID:eventId}); }catch(e){}
+  sendCapi(eventId);
   try{ if(window.gtag) gtag('event','generate_lead'); }catch(e){}
   if(!WEBHOOK_URL) { console.info('[Lead capturado]', lead); return; }
 
@@ -432,6 +438,26 @@ function send(){
       keepalive: true
     }).catch(function(){ beacon(payload); });
   }catch(e){ beacon(payload); }
+}
+// API de Conversões (server-side) — o token fica só na Vercel, em /api/meta-capi.
+function cookie(n){
+  var m = document.cookie.match('(?:^|; )'+n+'=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function sendCapi(eventId){
+  try{
+    fetch('/api/meta-capi', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        event_name:'Lead', event_id:eventId, event_source_url:location.href,
+        email:lead.email, phone:lead.whatsapp, nome:lead.nome,
+        fbp:cookie('_fbp'), fbc:cookie('_fbc'),
+        fbclid:new URLSearchParams(location.search).get('fbclid') || ''
+      }),
+      keepalive: true
+    }).catch(function(){});
+  }catch(e){}
 }
 // Fallback à prova de CORS: content-type "simples" (text/plain) não dispara
 // preflight, então a requisição sempre chega ao n8n com o JSON no corpo.
